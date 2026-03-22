@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>RowMailer - Mock</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; font-size: 13px; background: #e8eaed; display: flex; justify-content: center; padding: 24px; }
+    .device-frame { background: #fff; width: 380px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); overflow: hidden; }
+    .mock-banner { background: #f0ad00; color: #fff; text-align: center; font-size: 11px; padding: 4px; }
+    .tabs { display: flex; border-bottom: 2px solid #e8eaed; }
+    .tab-btn { flex:1; padding:10px 4px; border:none; background:transparent; font-size:12px; color:#5f6368; cursor:pointer; }
+    .tab-btn.active { color:#1a73e8; border-bottom:2px solid #1a73e8; margin-bottom:-2px; }
+    .tab-content { display:none; padding:16px; }
+    .tab-content.active { display:block; }
+    label { display:block; font-size:11px; color:#5f6368; margin:12px 0 4px; }
+    select, input, textarea { width:100%; padding:7px 8px; border:1px solid #dadce0; border-radius:4px; font-size:13px; }
+    .btn-primary { background:#1a73e8; color:#fff; border:none; border-radius:4px; padding:8px 16px; width:100%; margin-top:8px; cursor:pointer; }
+    .condition-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+    hr { border:none; border-top:1px solid #e8eaed; margin:12px 0; }
+  </style>
+</head>
+<body>
+<div class="device-frame">
+  <div class="mock-banner">MOCK - ブラウザプレビュー用</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 0;">
+    <strong style="font-size:16px;">RowMailer</strong>
+    <span style="background:#e8f0fe;color:#1a73e8;padding:2px 8px;border-radius:12px;font-size:11px;">Free</span>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('condition',this)">条件設定</button>
+    <button class="tab-btn" onclick="switchTab('template',this)">テンプレート</button>
+    <button class="tab-btn" onclick="switchTab('settings',this)">設定</button>
+  </div>
+  <div id="tab-condition" class="tab-content active">
+    <label>対象シート</label><select><option>注文管理シート</option></select>
+    <label>送信先メール列</label><select><option>メールアドレス</option></select>
+    <hr>
+    <label>送信条件</label>
+    <div class="condition-row">
+      <select><option>ステータス</option></select>
+      <select><option>=（等しい）</option></select>
+      <input type="text" value="確認済み">
+    </div>
+    <button class="btn-primary">設定を保存</button>
+  </div>
+  <div id="tab-template" class="tab-content">
+    <label>件名テンプレート</label><input type="text" value="{{氏名}}様 ご注文確認">
+    <label>本文テンプレート</label><textarea rows="5">{{氏名}} 様
+
+ご注文いただきありがとうございます。
+注文番号: {{注文番号}}</textarea>
+    <button class="btn-primary">設定を保存</button>
+  </div>
+  <div id="tab-settings" class="tab-content">
+    <button class="btn-primary">今すぐ実行</button>
+  </div>
+</div>
+<script>
+  function switchTab(t,btn){
+    document.querySelectorAll('.tab-content').forEach(function(el){el.classList.remove('active');});
+    document.querySelectorAll('.tab-btn').forEach(function(el){el.classList.remove('active');});
+    document.getElementById('tab-'+t).classList.add('active'); btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

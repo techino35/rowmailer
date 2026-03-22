@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>RowMailer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Google Sans', Arial, sans-serif; font-size: 13px; color: #202124; background: #fff; }
+    .tabs { display: flex; border-bottom: 2px solid #e8eaed; background: #f8f9fa; }
+    .tab-btn { flex: 1; padding: 10px 4px; border: none; background: transparent; font-size: 12px; color: #5f6368; cursor: pointer; font-weight: 500; }
+    .tab-btn.active { color: #1a73e8; border-bottom: 2px solid #1a73e8; margin-bottom: -2px; }
+    .tab-content { display: none; padding: 16px; }
+    .tab-content.active { display: block; }
+    label { display: block; font-size: 11px; font-weight: 500; color: #5f6368; margin-bottom: 4px; margin-top: 12px; }
+    label:first-child { margin-top: 0; }
+    select, input[type="text"], textarea { width: 100%; padding: 7px 8px; border: 1px solid #dadce0; border-radius: 4px; font-size: 13px; color: #202124; outline: none; }
+    textarea { resize: vertical; min-height: 80px; font-family: monospace; font-size: 12px; }
+    .btn { padding: 8px 16px; border: none; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; }
+    .btn-primary { background: #1a73e8; color: #fff; }
+    .btn-secondary { background: #f1f3f4; color: #202124; }
+    .btn-danger { background: #ea4335; color: #fff; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-block { width: 100%; margin-top: 8px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-free { background: #e8f0fe; color: #1a73e8; }
+    .badge-pro { background: #fce8b2; color: #e37400; }
+    .status-bar { background: #f8f9fa; border: 1px solid #e8eaed; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; }
+    .status-bar .row { display: flex; justify-content: space-between; align-items: center; }
+    .progress-bar { height: 6px; background: #e8eaed; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #1a73e8; border-radius: 3px; }
+    .alert { padding: 8px 12px; border-radius: 4px; font-size: 12px; margin: 8px 0; display: none; }
+    .alert-success { background: #e6f4ea; color: #137333; }
+    .alert-error { background: #fce8e6; color: #c5221f; }
+    .alert-warn { background: #fef7e0; color: #e37400; }
+    .condition-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .trigger-card { background: #f8f9fa; border: 1px solid #e8eaed; border-radius: 6px; padding: 12px; margin-top: 8px; }
+    .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 0; }
+    .sidebar-header h1 { font-size: 16px; font-weight: 600; }
+    hr { border: none; border-top: 1px solid #e8eaed; margin: 12px 0; }
+    .pro-only-note { font-size: 11px; color: #ea8600; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div class="sidebar-header">
+  <h1>RowMailer</h1>
+  <span id="planBadge" class="badge badge-free">Free</span>
+</div>
+<div class="status-bar" style="margin: 12px 16px 0;">
+  <div class="row"><span>本日の送信数</span><span id="sentCount">-/-</span></div>
+  <div class="progress-bar"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
+</div>
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('condition')">条件設定</button>
+  <button class="tab-btn" onclick="switchTab('template')">テンプレート</button>
+  <button class="tab-btn" onclick="switchTab('settings')">設定</button>
+</div>
+<div id="tab-condition" class="tab-content active">
+  <div id="alertCondition" class="alert"></div>
+  <label>対象シート</label><select id="sheetName"></select>
+  <label>送信先メール列</label><select id="toColumn"></select>
+  <hr>
+  <label>送信条件（空白 = 全行対象）</label>
+  <div class="condition-row">
+    <select id="condColumn"><option value="">列を選択</option></select>
+    <select id="condOperator">
+      <option value="=">=（等しい）</option><option value="!=">!=（等しくない）</option>
+      <option value=">">＞（より大きい）</option><option value="<">＜（より小さい）</option>
+      <option value=">=">>=（以上）</option><option value="<="><=（以下）</option>
+      <option value="contains">contains</option><option value="not_contains">not contains</option>
+      <option value="is_not_empty">is not empty</option><option value="is_empty">is empty</option>
+    </select>
+    <input type="text" id="condValue" placeholder="値">
+  </div>
+  <label>送信ログ列</label><select id="logColumn"><option value="">書き込まない</option></select>
+  <label>CC</label><input type="text" id="ccFixed" placeholder="cc@example.com">
+  <label>BCC</label><input type="text" id="bccFixed" placeholder="bcc@example.com">
+  <button class="btn btn-primary btn-block" onclick="saveSettings()">設定を保存</button>
+</div>
+<div id="tab-template" class="tab-content">
+  <div id="alertTemplate" class="alert"></div>
+  <label>差出人名</label><input type="text" id="senderName" placeholder="例: 山田太郎">
+  <label>件名テンプレート</label><input type="text" id="subject" placeholder="{{氏名}}様へのご案内">
+  <label>本文テンプレート</label>
+  <textarea id="body" rows="8" placeholder="{{氏名}}様"></textarea>
+  <label><input type="checkbox" id="useHtml"> HTML形式で送信</label>
+  <hr>
+  <button class="btn btn-secondary btn-sm" onclick="previewTemplate()">プレビュー（1行目）</button>
+  <div id="previewArea" style="display:none;margin-top:8px;">
+    <div style="background:#f8f9fa;border:1px solid #e8eaed;border-radius:4px;padding:8px;font-size:12px;">
+      <div><strong>件名:</strong> <span id="previewSubject"></span></div>
+      <hr style="margin:6px 0;">
+      <div id="previewBody" style="white-space:pre-wrap;"></div>
+    </div>
+  </div>
+  <hr>
+  <label>テンプレートライブラリ <span class="badge badge-pro">Pro</span></label>
+  <p class="pro-only-note" id="proOnlyNote">Proプランで複数テンプレートを保存できます</p>
+  <div id="templateLibList" style="display:none;">
+    <input type="text" id="templateSaveName" placeholder="テンプレート名">
+    <button class="btn btn-secondary btn-sm btn-block" onclick="saveTemplateLib()">現在のテンプレートを保存</button>
+    <div id="templateListItems" style="margin-top:8px;"></div>
+  </div>
+  <button class="btn btn-primary btn-block" onclick="saveSettings()">設定を保存</button>
+</div>
+<div id="tab-settings" class="tab-content">
+  <div id="alertSettings" class="alert"></div>
+  <div class="trigger-card">
+    <div style="font-weight:600;font-size:13px;margin-bottom:8px;">タイマートリガー</div>
+    <div id="triggerStatus" style="font-size:12px;color:#5f6368;margin-bottom:8px;"></div>
+    <label>実行間隔</label>
+    <select id="triggerInterval">
+      <option value="hourly">1時間ごと</option>
+      <option value="every6hours">6時間ごと</option>
+      <option value="daily">毎日 9:00</option>
+    </select>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <button class="btn btn-primary btn-sm" style="flex:1;" onclick="setTrigger()">設定</button>
+      <button class="btn btn-danger btn-sm" style="flex:1;" onclick="deleteTrigger()">削除</button>
+    </div>
+  </div>
+  <hr>
+  <div style="font-weight:600;font-size:13px;margin-bottom:6px;">テスト送信</div>
+  <p style="font-size:12px;color:#5f6368;margin-bottom:8px;">条件に合う最初の1行を自分のメールアドレスに送信します。</p>
+  <button class="btn btn-secondary btn-block" onclick="runTest()">テスト送信を実行</button>
+  <hr>
+  <button class="btn btn-primary btn-block" onclick="runNow()">今すぐ実行</button>
+  <hr>
+  <div style="font-weight:600;font-size:13px;margin-bottom:6px;">ライセンス</div>
+  <div id="licenseInfo" style="font-size:12px;color:#5f6368;margin-bottom:8px;"></div>
+  <label>ライセンスキー</label>
+  <input type="text" id="licenseKey" placeholder="ROWMAILER-PRO-XXXXXXXXXXXXXXXX">
+  <button class="btn btn-secondary btn-sm btn-block" style="margin-top:6px;" onclick="saveLicense()">ライセンスを認証</button>
+</div>
+<script>
+  var sheetInfo = {}, config = {}, isPro = false;
+  window.onload = function() { loadAll(); };
+  function loadAll() {
+    google.script.run.withSuccessHandler(function(info){sheetInfo=info;populateSheetSelects();}).withFailureHandler(handleError).getSheetInfo();
+    google.script.run.withSuccessHandler(function(c){config=c||{};populateFormFromConfig();}).withFailureHandler(handleError).loadConfig();
+    google.script.run.withSuccessHandler(updateDailyStatus).withFailureHandler(handleError).getDailyStatus();
+    google.script.run.withSuccessHandler(function(li){isPro=li.isPro;updateLicenseUI(li);}).withFailureHandler(handleError).getLicenseInfo();
+    google.script.run.withSuccessHandler(updateTriggerUI).withFailureHandler(handleError).getTriggerInfo();
+  }
+  function populateSheetSelects(){
+    var sel=document.getElementById('sheetName'); sel.innerHTML='';
+    sheetInfo.sheetNames.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;if(n===sheetInfo.activeSheet)o.selected=true;sel.appendChild(o);});
+    populateHeaderSelects(sheetInfo.headers);
+  }
+  function populateHeaderSelects(headers){
+    ['toColumn','condColumn','logColumn'].forEach(function(id){
+      var sel=document.getElementById(id),cv=sel.value,empty=id==='logColumn'?'書き込まない':'列を選択';
+      sel.innerHTML='<option value="">'+empty+'</option>';
+      headers.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h;sel.appendChild(o);});
+      if(cv)sel.value=cv;
+    });
+  }
+  function populateFormFromConfig(){
+    if(!config)return;
+    setVal('sheetName',config.sheetName);setVal('toColumn',config.toColumn);
+    setVal('senderName',config.senderName);setVal('subject',config.subject);setVal('body',config.body);
+    document.getElementById('useHtml').checked=!!config.useHtml;
+    setVal('ccFixed',config.ccFixed);setVal('bccFixed',config.bccFixed);
+    if(config.condition){setVal('condColumn',config.condColumn||config.condition.columnHeader);setVal('condOperator',config.condition.operator);setVal('condValue',config.condition.value);}
+    if(config.logColumnHeader)setVal('logColumn',config.logColumnHeader);
+  }
+  function setVal(id,val){var el=document.getElementById(id);if(el&&val!==undefined&&val!==null)el.value=val;}
+  function saveSettings(){
+    var headers=sheetInfo.headers||[],ch=document.getElementById('condColumn').value,lh=document.getElementById('logColumn').value;
+    var cfg={sheetName:document.getElementById('sheetName').value,toColumn:document.getElementById('toColumn').value,senderName:document.getElementById('senderName').value,subject:document.getElementById('subject').value,body:document.getElementById('body').value,useHtml:document.getElementById('useHtml').checked,ccFixed:document.getElementById('ccFixed').value,bccFixed:document.getElementById('bccFixed').value,condColumn:ch,logColumnHeader:lh,logColumnIndex:headers.indexOf(lh)};
+    if(ch)cfg.condition={columnIndex:headers.indexOf(ch),columnHeader:ch,operator:document.getElementById('condOperator').value,value:document.getElementById('condValue').value};
+    google.script.run.withSuccessHandler(function(r){if(r.success){showAlert('alertCondition','設定を保存しました','success');showAlert('alertTemplate','設定を保存しました','success');config=cfg;}else showAlert('alertCondition','保存エラー: '+r.message,'error');}).withFailureHandler(function(e){showAlert('alertCondition','エラー: '+e.message,'error');}).saveConfig(cfg);
+  }
+  function previewTemplate(){google.script.run.withSuccessHandler(function(r){document.getElementById('previewSubject').textContent=r.subject;document.getElementById('previewBody').textContent=r.body;document.getElementById('previewArea').style.display='block';}).withFailureHandler(handleError).previewTemplate(document.getElementById('subject').value,document.getElementById('body').value);}
+  function saveTemplateLib(){var n=document.getElementById('templateSaveName').value.trim();if(!n){alert('テンプレート名を入力してください');return;}google.script.run.withSuccessHandler(function(r){if(r.success){showAlert('alertTemplate','保存しました','success');loadTemplateList();}else showAlert('alertTemplate',r.message,'error');}).withFailureHandler(handleError).saveTemplate(n,{subject:document.getElementById('subject').value,body:document.getElementById('body').value});}
+  function loadTemplateList(){if(!isPro)return;google.script.run.withSuccessHandler(function(lib){var c=document.getElementById('templateListItems');c.innerHTML='';Object.keys(lib).forEach(function(n){var d=document.createElement('div');d.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #e8eaed;';d.innerHTML='<span style="font-size:12px;">'+n+'</span><div><button class="btn btn-secondary btn-sm" onclick="loadTemplate(\''+n+'\')" >適用</button> <button class="btn btn-danger btn-sm" onclick="deleteTemplateLib(\''+n+'\')" >削除</button></div>';c.appendChild(d);});}).withFailureHandler(handleError).getTemplateLibrary();}
+  function loadTemplate(n){google.script.run.withSuccessHandler(function(lib){if(lib[n]){document.getElementById('subject').value=lib[n].subject||'';document.getElementById('body').value=lib[n].body||'';}}).withFailureHandler(handleError).getTemplateLibrary();}
+  function deleteTemplateLib(n){if(!confirm('"'+n+'" を削除しますか？'))return;google.script.run.withSuccessHandler(function(r){if(r.success)loadTemplateList();}).withFailureHandler(handleError).deleteTemplate(n);}
+  function setTrigger(){var iv=document.getElementById('triggerInterval').value;google.script.run.withSuccessHandler(function(r){if(r.success){showAlert('alertSettings','トリガーを設定しました','success');updateTriggerUI({exists:true,intervalType:r.intervalType});}else showAlert('alertSettings','エラー: '+r.message,'error');}).withFailureHandler(function(e){showAlert('alertSettings','エラー: '+e.message,'error');}).setTrigger(iv);}
+  function deleteTrigger(){google.script.run.withSuccessHandler(function(r){if(r.success){showAlert('alertSettings','トリガーを削除しました','success');updateTriggerUI({exists:false});}}).withFailureHandler(handleError).deleteTrigger();}
+  function updateTriggerUI(info){var el=document.getElementById('triggerStatus');if(info.exists){var labels={hourly:'1時間ごと',every6hours:'6時間ごと',daily:'毎日9:00'};el.textContent='設定済み: '+(labels[info.intervalType]||info.intervalType);el.style.color='#137333';setVal('triggerInterval',info.intervalType);}else{el.textContent='トリガー未設定';el.style.color='#5f6368';}}
+  function runTest(){google.script.run.withSuccessHandler(function(){showAlert('alertSettings','テスト送信を実行しました','success');}).withFailureHandler(function(e){showAlert('alertSettings','エラー: '+e.message,'error');}).runTestSend();}
+  function runNow(){google.script.run.withSuccessHandler(function(){showAlert('alertSettings','実行しました','success');google.script.run.withSuccessHandler(updateDailyStatus).getDailyStatus();}).withFailureHandler(function(e){showAlert('alertSettings','エラー: '+e.message,'error');}).runMailerManual();}
+  function saveLicense(){var k=document.getElementById('licenseKey').value;google.script.run.withSuccessHandler(function(r){if(r.success){isPro=r.result.isPro;updateLicenseUI(r.result);showAlert('alertSettings',r.result.message,r.result.isPro?'success':'warn');}else showAlert('alertSettings','エラー: '+r.message,'error');}).withFailureHandler(handleError).saveLicenseKey(k);}
+  function updateLicenseUI(li){var b=document.getElementById('planBadge'),i=document.getElementById('licenseInfo');if(li.isPro){b.textContent='Pro';b.className='badge badge-pro';i.textContent='Proプラン有効 - 日500通まで';document.getElementById('proOnlyNote').style.display='none';document.getElementById('templateLibList').style.display='block';loadTemplateList();}else{b.textContent='Free';b.className='badge badge-free';i.textContent='Freeプラン - 日50通まで';document.getElementById('proOnlyNote').style.display='block';document.getElementById('templateLibList').style.display='none';}}
+  function updateDailyStatus(s){document.getElementById('sentCount').textContent=s.sent+'/'+s.limit;var p=s.limit>0?Math.min(100,Math.round(s.sent/s.limit*100)):0;var f=document.getElementById('progressFill');f.style.width=p+'%';f.style.background=p>=90?'#ea4335':'#1a73e8';}
+  function switchTab(tab){document.querySelectorAll('.tab-content').forEach(function(el){el.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(el){el.classList.remove('active');});document.getElementById('tab-'+tab).classList.add('active');event.target.classList.add('active');}
+  function showAlert(cid,msg,type,keep){var el=document.getElementById(cid);if(!el)return;el.textContent=msg;el.className='alert alert-'+type;el.style.display='block';if(!keep)setTimeout(function(){el.style.display='none';},3000);}
+  function handleError(err){console.error(err);showAlert('alertCondition','エラー: '+(err.message||err),'error');}
+</script>
+</body>
+</html>
